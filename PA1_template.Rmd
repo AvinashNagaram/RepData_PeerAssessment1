@@ -7,19 +7,111 @@ output:
 
 
 ## Loading and preprocessing the data
+```{r echo=TRUE}
+setwd('C:\\Users\\DELL\\Desktop\\RStudio\\dir')
 
+activity <- read.csv('activity.csv')
+```
 
 
 ## What is mean total number of steps taken per day?
 
+```{r echo=TRUE}
+steps_per_day <- aggregate(steps ~ date, activity, sum)
+hist(steps_per_day$steps, main= paste("Total steps each day"), col="blue",
+     xlab= "Number of Steps")
 
+rmean <- mean(steps_per_day$steps)
+rmean
+
+rmedian <- median(steps_per_day$steps)
+rmedian
+
+```
 
 ## What is the average daily activity pattern?
+
+```{r echo=TRUE}
+steps_per_interval <- aggregate(steps ~ interval, activity, mean)
+
+plot(steps_per_interval$interval, steps_per_interval$steps, type='l', xlab='Interval', 
+     ylab='Number of Steps', main= 'Average steps per day per interval')
+max_interval <- steps_per_interval[which.max(steps_per_interval$steps),1]
+max_interval
+
+
+```
+
 
 
 
 ## Imputing missing values
 
+## a.calculate the total number of missing values
+```{r echo=TRUE}
+NATotal <- sum(!complete.cases(activity))
+NATotal
+
+```
+## b.use mean to compute missing values
+```{r echo=TRUE}
+
+stepsavg   <- aggregate(steps ~ interval, activity, mean)
+
+fillNA <- numeric()
+
+for (i in 1:nrow(activity)){
+  obs <- activity[i, ]
+  if (is.na(obs$steps)) {
+    steps <- subset(stepsavg, interval == obs$interval)$steps
+  } else {
+    steps <- obs$steps
+  }
+  fillNA <- c(fillNA, steps)
+}
+```
+
+## c.new dataset with missing values
+```{r echo=TRUE}
+newdata <- activity
+newdata$steps <- fillNA
+
+```
+
+## d.histogram with total steps, mean and median
+```{r echo=TRUE}
+stepstotal <- aggregate(steps ~ date, newdata, sum, na.rm = TRUE)
+hist(stepstotal$steps, main = paste("Total Steps"), col = "blue", xlab= "No: Steps")
+#Create histogram to show differences
+hist(steps_per_day$steps, main = paste("Total Steps Each Day"), col="green", xlab="Number of Steps", add=T)
+legend("topright", c("Imputed", "Non-imputed"), col=c("blue", "green"), lwd=10)
+
+
+rmeantotal <- mean(stepstotal$steps)
+rmeantotal
+
+rmediantotal <- median(stepstotal$steps)
+rmediantotal
+
+rmeandiff <- rmediantotal - rmedian
+rmediandiff <- rmediantotal - rmedian
+
+rmeandiff
+rmediandiff
+
+
+```
 
 
 ## Are there differences in activity patterns between weekdays and weekends?
+```{r echo=TRUE}
+
+weekdays <- c("Monday", "Tuesday", "Wednesday", "Thursday", 
+              "Friday")
+newdata$dow <- as.factor(ifelse(is.element(weekdays(as.Date(newdata$date)),
+                                           weekdays),"Weekday","Weekend"))
+StepsTotalUnion <- aggregate(steps ~ interval + dow, newdata, mean)
+library(lattice)
+xyplot(StepsTotalUnion$steps ~ StepsTotalUnion$interval|StepsTotalUnion$dow, main="Average Steps per Day by Interval",xlab="Interval", ylab="Steps",layout=c(1,2), type="l")              
+
+```
